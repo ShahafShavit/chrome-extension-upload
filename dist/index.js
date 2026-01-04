@@ -39,41 +39,71 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const chrome_webstore_upload_1 = __importDefault(__nccwpck_require__(1672));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const glob_1 = __importDefault(__nccwpck_require__(1957));
-const chrome_webstore_upload_1 = __importDefault(__nccwpck_require__(1672));
 function uploadFile(webStore, filePath, publishFlg, publishTarget) {
-    const myZipFile = fs_1.default.createReadStream(filePath);
-    webStore
-        .uploadExisting(myZipFile)
-        .then((uploadRes) => {
-        console.log(uploadRes);
-        core.debug(uploadRes);
-        if (uploadRes.uploadState &&
-            (uploadRes.uploadState === 'FAILURE' ||
-                uploadRes.uploadState === 'NOT_FOUND')) {
-            uploadRes.itemError.forEach((itemError) => {
-                core.error(Error(`${itemError.error_detail} (${itemError.error_code})`));
-            });
-            core.setFailed('upload error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.');
-            return;
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
+        const myZipFile = fs_1.default.createReadStream(filePath);
+        try {
+            const uploadRes = yield webStore.uploadExisting(myZipFile);
+            console.log(uploadRes);
+            core.debug(uploadRes);
+            if (uploadRes.uploadState &&
+                (uploadRes.uploadState === 'FAILURE' ||
+                    uploadRes.uploadState === 'NOT_FOUND')) {
+                uploadRes.itemError.forEach((itemError) => {
+                    core.error(Error(`${itemError.error_detail} (${itemError.error_code})`));
+                });
+                core.setFailed('Upload Error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.');
+                return;
+            }
+            // Probe the extension's current publish state after successful upload
+            try {
+                const itemInfo = yield webStore.get();
+                console.log('Extension info:', itemInfo);
+                core.info(`Extension publish state: ${itemInfo.publishState}`);
+                core.info(`Extension status: ${itemInfo.status}`);
+            }
+            catch (getError) {
+                core.warning(`Could not retrieve extension state: ${getError.message}`);
+            }
+            if (publishFlg === 'true') {
+                try {
+                    const publishRes = yield webStore.publish(publishTarget);
+                    console.log(publishRes);
+                    core.debug(publishRes);
+                    // Check for non-OK status in the response
+                    if (publishRes.status && !publishRes.status.includes('OK')) {
+                        core.error(`Publish failed with status: ${publishRes.status.join(', ')}`);
+                        if (publishRes.statusDetail) {
+                            core.error(`Reason: ${publishRes.statusDetail}`);
+                        }
+                        core.setFailed('Publish Error: Please check the details above');
+                        return;
+                    }
+                    core.info('Extension published successfully');
+                }
+                catch (e) {
+                    console.log(e);
+                    core.error(e);
+                    // Log additional details if available
+                    if ((_a = e.response) === null || _a === void 0 ? void 0 : _a.statusDetail) {
+                        core.error(`Reason: ${e.response.statusDetail}`);
+                    }
+                    if ((_b = e.response) === null || _b === void 0 ? void 0 : _b.status) {
+                        core.error(`Status: ${e.response.status}`);
+                    }
+                    core.setFailed('Publish Error - You will need to access the Chrome Web Store Developer Dashboard and publish manually.');
+                }
+            }
         }
-        if (publishFlg === 'true') {
-            webStore
-                .publish(publishTarget)
-                .then((publishRes) => {
-                core.debug(publishRes);
-            })
-                .catch((e) => {
-                core.error(e);
-                core.setFailed('publish error - You will need to access the Chrome Web Store Developer Dashboard and publish manually.');
-            });
+        catch (e) {
+            console.log(e);
+            core.error(e);
+            core.setFailed('Upload Error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.');
         }
-    })
-        .catch((e) => {
-        console.log(e);
-        core.error(e);
-        core.setFailed('upload error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.');
     });
 }
 function run() {
@@ -96,14 +126,14 @@ function run() {
             if (globFlg === 'true') {
                 const files = glob_1.default.sync(filePath);
                 if (files.length > 0) {
-                    uploadFile(webStore, files[0], publishFlg, publishTarget);
+                    yield uploadFile(webStore, files[0], publishFlg, publishTarget);
                 }
                 else {
                     core.setFailed('No files to match.');
                 }
             }
             else {
-                uploadFile(webStore, filePath, publishFlg, publishTarget);
+                yield uploadFile(webStore, filePath, publishFlg, publishTarget);
             }
         }
         catch (error) {

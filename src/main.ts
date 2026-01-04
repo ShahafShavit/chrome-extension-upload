@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
+import chromeWebstoreUpload from 'chrome-webstore-upload'
 import fs from 'fs'
 import glob from 'glob'
-import chromeWebstoreUpload from 'chrome-webstore-upload'
 
 async function uploadFile(
   webStore: any,
@@ -16,11 +16,17 @@ async function uploadFile(
     console.log(uploadRes)
     core.debug(uploadRes)
 
-    if (uploadRes.uploadState && (uploadRes.uploadState === 'FAILURE' || uploadRes.uploadState === 'NOT_FOUND')) {
+    if (
+      uploadRes.uploadState &&
+      (uploadRes.uploadState === 'FAILURE' ||
+        uploadRes.uploadState === 'NOT_FOUND')
+    ) {
       uploadRes.itemError.forEach((itemError: any) => {
         core.error(Error(`${itemError.error_detail} (${itemError.error_code})`))
       })
-      core.setFailed('Upload Error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.')
+      core.setFailed(
+        'Upload Error - You will need to go to the Chrome Web Store Developer Dashboard and upload it manually.'
+      )
       return
     }
 
@@ -30,7 +36,7 @@ async function uploadFile(
       console.log('Extension info:', itemInfo)
       core.info(`Extension publish state: ${itemInfo.publishState}`)
       core.info(`Extension status: ${itemInfo.status}`)
-    } catch (getError: any) {
+    } catch (getError) {
       core.warning(`Could not retrieve extension state: ${getError.message}`)
     }
 
@@ -42,7 +48,9 @@ async function uploadFile(
 
         // Check for non-OK status in the response
         if (publishRes.status && !publishRes.status.includes('OK')) {
-          core.error(`Publish failed with status: ${publishRes.status.join(', ')}`)
+          core.error(
+            `Publish failed with status: ${publishRes.status.join(', ')}`
+          )
           if (publishRes.statusDetail) {
             core.error(`Reason: ${publishRes.statusDetail}`)
           }
@@ -50,7 +58,7 @@ async function uploadFile(
           return
         }
         core.info('Extension published successfully')
-      } catch (e: any) {
+      } catch (e) {
         console.log(e)
         core.error(e)
         // Log additional details if available
@@ -60,10 +68,12 @@ async function uploadFile(
         if (e.response?.status) {
           core.error(`Status: ${e.response.status}`)
         }
-        core.setFailed('Publish Error - You will need to access the Chrome Web Store Developer Dashboard and publish manually.')
+        core.setFailed(
+          'Publish Error - You will need to access the Chrome Web Store Developer Dashboard and publish manually.'
+        )
       }
     }
-  } catch (e: any) {
+  } catch (e) {
     console.log(e)
     core.error(e)
     core.setFailed(
