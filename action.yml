@@ -1,37 +1,46 @@
-name: 'Chrome extension upload action'
-description: 'upload & publish extensions to the Chrome Web Store'
-author: 'mnao305'
+name: 'Upload to Chrome Web Store'
+description: >-
+  Upload and publish your Chrome extension from GitHub Actions. Uses the modern Chrome Web Store API v2 when you
+  provide a publisher ID, and stays compatible with the legacy API if you omit it (until Google retires it).
+author: 'ShahafShavit'
 branding:
   color: blue
   icon: upload-cloud
 inputs:
   file-path:
-    description: 'path & filename to a zip file'
+    description: 'Path to your packaged extension (.zip), relative to the repository root.'
     required: true
   extension-id:
-    description: 'extension id'
+    description: 'Your item ID from the Chrome Web Store (the id in the store URL and Developer Dashboard).'
     required: true
+  publisher-id:
+    description: >-
+      Optional. Your Publisher ID from Developer Dashboard → Account. If set, the action uses Chrome Web Store API v2
+      (recommended). If left empty, the action uses legacy API v1.1 for backward compatibility; Google plans to turn off
+      v1 after October 15, 2026.
+    required: false
+    default: ''
   client-id:
-    description: 'client id'
+    description: 'OAuth 2.0 Client ID from Google Cloud Console (same project where Chrome Web Store API is enabled).'
     required: true
   client-secret:
-    description: 'client secret'
+    description: 'OAuth 2.0 Client Secret for that client.'
     required: true
   refresh-token:
-    description: 'refresh token'
+    description: 'OAuth 2.0 refresh token with scope https://www.googleapis.com/auth/chromewebstore (see Chrome Web Store API docs).'
     required: true
   glob:
-    description: 'if true the file can be a glob pattern'
+    description: 'If true, `file-path` is treated as a glob; the first matching file is uploaded.'
     required: false
-    default: "false"
+    default: 'false'
   publish:
-    description: 'if true package will be automatically published'
+    description: 'If true (default), submits the new package for publishing after upload. Set false to upload only (e.g. for testing).'
     required: false
-    default: "true"
+    default: 'true'
   publish-target:
     required: false
-    description: 'target of publish (`default` or `trustedTesters`)'
-    default: "default"
+    description: 'Legacy v1 only: `default` or `trustedTesters`. With API v2, visibility is managed in the Developer Dashboard.'
+    default: 'default'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

@@ -2,15 +2,18 @@
   "name": "chrome-extension-upload",
   "version": "1.0.0",
   "private": true,
-  "description": "Better way to upload & publish extensions to the Chrome Web Store",
+  "description": "GitHub Action to upload and publish Chrome extensions using the Chrome Web Store API (v2 with publisher ID, legacy v1 compatible without it).",
   "main": "lib/main.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-    "pack": "ncc build",
-    "test": "jest",
+    "pack": "ncc build lib/main.js -o dist",
+    "run:local": "npm run build && node scripts/run-local.cjs",
     "all": "npm run build && npm run format && npm run lint && npm run pack"
   },
   "repository": {
@@ -18,32 +21,28 @@
     "url": "git+https://github.com/ShahafShavit/chrome-extension-upload.git"
   },
   "keywords": [
-    "actions",
-    "node",
-    "setup"
+    "github-actions",
+    "chrome-extension",
+    "chrome-web-store",
+    "chromewebstore",
+    "ci",
+    "publish"
   ],
   "author": "ShahafShavit",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.2.6",
-    "chrome-webstore-upload": "^1.0.0",
     "glob": "^7.1.6"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
-    "@types/jest": "^27.0.2",
-    "@types/node": "^12.7.12",
+    "@types/node": "^20.14.0",
     "@typescript-eslint/eslint-plugin": "^5.3.0",
     "@typescript-eslint/parser": "^5.3.0",
     "@vercel/ncc": "^0.36.0",
+    "dotenv": "^17.4.1",
     "eslint": "^8.2.0",
-    "eslint-plugin-github": "^4.3.3",
-    "eslint-plugin-jest": "^22.21.0",
-    "jest": "^27.3.1",
-    "jest-circus": "^27.3.1",
-    "js-yaml": "^3.13.1",
     "prettier": "^1.19.1",
-    "ts-jest": "^27.0.7",
-    "typescript": "^3.6.4"
+    "typescript": "^5.5.0"
   }
 }
