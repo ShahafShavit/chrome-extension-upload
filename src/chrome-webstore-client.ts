@@ -125,15 +125,18 @@ async function sharedFetchToken(
   clientSecret: string,
   refreshToken: string
 ): Promise<string> {
+  // RFC 6749 + Google’s token endpoint: form body, not JSON.
+  // https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token'
+  })
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token'
-    })
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body.toString()
   })
   const json = (await res.json()) as {
     access_token?: string

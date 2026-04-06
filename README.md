@@ -298,8 +298,11 @@ Same credentials the action uses work from the terminal. Replace placeholders an
 
 ```bash
 curl -s "https://oauth2.googleapis.com/token" \
-  -H "Content-Type: application/json" \
-  -d "{\"client_id\":\"$CLIENT_ID\",\"client_secret\":\"$CLIENT_SECRET\",\"refresh_token\":\"$REFRESH_TOKEN\",\"grant_type\":\"refresh_token\"}"
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "client_secret=$CLIENT_SECRET" \
+  --data-urlencode "refresh_token=$REFRESH_TOKEN" \
+  --data-urlencode "grant_type=refresh_token"
 ```
 
 **API v2 — item status**

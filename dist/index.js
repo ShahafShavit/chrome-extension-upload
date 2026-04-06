@@ -60,15 +60,18 @@ function parseJsonMaybe(text) {
 }
 function sharedFetchToken(clientId, clientSecret, refreshToken) {
     return __awaiter(this, void 0, void 0, function* () {
+        // RFC 6749 + Google’s token endpoint: form body, not JSON.
+        // https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code
+        const body = new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+        });
         const res = yield fetch(TOKEN_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: clientId,
-                client_secret: clientSecret,
-                refresh_token: refreshToken,
-                grant_type: 'refresh_token'
-            })
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
         });
         const json = (yield res.json());
         if (!res.ok || !json.access_token) {
