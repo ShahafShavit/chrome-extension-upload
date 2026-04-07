@@ -1,7 +1,5 @@
 name: 'Upload to Chrome Web Store'
-description: >-
-  Upload and publish your Chrome extension from GitHub Actions. Uses the modern Chrome Web Store API v2 when you
-  provide a publisher ID, and stays compatible with the legacy API if you omit it (until Google retires it).
+description: 'A better, easier way to upload and publish Chrome extensions to the Chrome Web Store from GitHub Actions.'
 author: 'ShahafShavit'
 branding:
   color: blue
