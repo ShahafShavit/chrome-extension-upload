@@ -17,158 +17,10 @@ A better, easier way to upload and publish Chrome extensions to the [Chrome Web 
 ## Before you start
 
 1. Create a **zip** of your extension (same layout you would upload manually).
-2. Follow **[How to get your Chrome Web Store credentials](#how-to-get-your-chrome-web-store-credentials)** below to obtain **client ID**, **client secret**, **refresh token**, and (for API v2) **publisher ID** and **extension ID**.
+2. Obtain **client ID**, **client secret**, **refresh token**, and (for API v2) **publisher ID** and **extension ID** — see **[How to get your Chrome Web Store credentials](#how-to-get-your-chrome-web-store-credentials)** (full walkthrough after the workflow examples below).
 3. Add those values as GitHub **repository secrets** and reference them in your workflow.
 
 The official guide from Google is also worth bookmarking: [Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api).
-
-## How to get your Chrome Web Store credentials
-
-This section walks through the full setup: Google Cloud project, OAuth client, refresh token, and the IDs the action expects. Plan on **20–40 minutes** the first time, especially if you need to configure the consent screen or wait for Google’s review (only if you move out of testing mode).
-
-### Prerequisites
-
-1. **Google account that owns the extension**  
-   The account you use when you sign in to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) must be the same one you authorize in the OAuth steps below. The items you manage via the API are tied to that developer identity.
-
-2. **2-Step Verification**  
-   Google requires [2-Step Verification](https://support.google.com/accounts/answer/185839) on the account that will publish or update items through the API.
-
-3. **Extension already exists in the store**  
-   The Chrome Web Store API updates **existing** items; it does not replace creating the listing the first time in the dashboard. For a **new** extension, complete initial setup (including [store listing](https://developer.chrome.com/docs/webstore/cws-dashboard-listing) and [privacy](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) where required) before relying on CI uploads.
-
-4. **Optional but recommended: API v2**  
-   For API **v2**, you need your **publisher ID** (see [Obtain your publisher ID](https://developer.chrome.com/docs/webstore/using-api#obtain_your_publisher_id)). For **v1.1** (legacy, if you omit `publisher-id`), you still need OAuth credentials; only the REST URLs differ.
-
----
-
-### Step 1 — Create or choose a Google Cloud project
-
-1. Open the [Google Cloud Console](https://console.cloud.google.com/).
-2. Use the project picker to **create a new project** or select an existing one.  
-   The Cloud project is only where the **OAuth client** and **API enablement** live. It does **not** have to match the email domain of your developer account, but the **person who clicks “Allow” in OAuth** must be the developer who owns the store items.
-
----
-
-### Step 2 — Enable the Chrome Web Store API
-
-1. In the Cloud Console, open **APIs & Services → Library** (or search the top bar for “Chrome Web Store API”).
-2. Find **Chrome Web Store API** and click **Enable**.
-
-Without this, token and API calls for the store will fail with errors about the API being disabled.
-
----
-
-### Step 3 — Configure the OAuth consent screen
-
-1. Go to **APIs & Services → OAuth consent screen**.
-2. Choose a user type:
-   - **External** — typical for individual developers and public GitHub workflows. While the app is in **Testing**, only **test users** you add can complete OAuth (see below).
-   - **Internal** — only if you use Google Workspace and want the app limited to your organization.
-3. Fill in the required **app information** (app name, user support email, developer contact).
-4. On **Scopes**, you can **Save and continue** without adding scopes manually here; the OAuth Playground (next sections) will request `https://www.googleapis.com/auth/chromewebstore` explicitly.
-5. If you chose **External** and the app is in **Testing**, open **Test users** and **add the Google account** that owns your Chrome Web Store items. That account must be able to finish the consent flow.
-6. Complete the wizard. If Google requires **verification** for production (broader audience), follow their process; for **Testing** + listed test users, you can proceed for your own account.
-
----
-
-### Step 4 — Create an OAuth 2.0 Client ID (Web application)
-
-1. Go to **APIs & Services → Credentials**.
-2. Click **Create credentials → OAuth client ID**.
-3. If prompted, set the **Application type** to **Web application**.
-4. Give it a name (e.g. `chrome-webstore-ci`).
-5. Under **Authorized redirect URIs**, click **Add URI** and enter exactly:
-
-   `https://developers.google.com/oauthplayground`
-
-   This is the redirect URL used by Google’s [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), which is the easiest way to obtain a **refresh token** once.
-
-6. Click **Create**.
-7. A dialog shows the **Client ID** and **Client Secret**. **Copy both** and store them somewhere safe (you will add them to GitHub secrets). You can always create a new secret in the console if you lose it (revoke the old one if compromised).
-
-These map to the action inputs **`client-id`** and **`client-secret`**.
-
----
-
-### Step 5 — Get a refresh token (OAuth 2.0 Playground)
-
-The action (and the Chrome Web Store API) needs a **refresh token** so CI can obtain short-lived **access tokens** without a browser.
-
-1. Open [OAuth 2.0 Playground](https://developers.google.com/oauthplayground).
-2. Click the **gear icon** (⚙) in the top right.
-3. Check **Use your own OAuth credentials**.
-4. Paste your **OAuth Client ID** and **OAuth Client secret** from Step 4.
-5. Close the settings panel.
-6. In the left column, find **Chrome Web Store API** (or use **“Enter your own scopes”** at the bottom) and enter this scope exactly:
-
-   `https://www.googleapis.com/auth/chromewebstore`
-
-7. Click **Authorize APIs**.
-8. Sign in with the **same Google account** that owns your Chrome Web Store developer account and items. Grant access when asked.
-9. Click **Exchange authorization code for tokens**.
-10. The response panel shows an **Access token** and a **Refresh token**.
-
-**Important**
-
-- Copy the **Refresh token** and treat it like a password. This is what you store in GitHub as a secret (e.g. `CHROME_REFRESH_TOKEN`). Anyone with refresh token + client id/secret can act as that user for this API scope until you **revoke** the token in [Google Account security](https://myaccount.google.com/permissions) or rotate credentials.
-- If the refresh token does not appear, you may need to revoke previous access for the Playground in your Google account and repeat, or ensure the redirect URI matches Step 4 exactly.
-
-This value maps to the action input **`refresh-token`**.
-
----
-
-### Step 6 — Extension ID and publisher ID
-
-**Extension ID (`extension-id`)**
-
-- In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/), open your item. The **extension ID** is the long string in the public store URL, e.g. `https://chrome.google.com/webstore/detail/.../THIS_PART_IS_THE_ID`.
-- Use that string as **`extension-id`** in the workflow (and in GitHub secrets if you prefer).
-
-**Publisher ID (`publisher-id`, for API v2)**
-
-1. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/), open **Account** (or the account section where your publisher is shown).
-2. Copy the **Publisher ID** displayed there.  
-   If you use a **group publisher**, switch to that publisher context first, then copy the ID for that context.
-3. Pass it as **`publisher-id`** so the action uses API v2. If you omit it, the action falls back to legacy v1.1 and logs a reminder to migrate.
-
----
-
-### Step 7 — Add secrets to GitHub
-
-In your repository: **Settings → Secrets and variables → Actions → New repository secret**.
-
-Suggested names (match the workflow examples in this README):
-
-| Secret | What it is |
-| --- | --- |
-| `CHROME_CLIENT_ID` | OAuth Client ID from Step 4 |
-| `CHROME_CLIENT_SECRET` | OAuth Client Secret from Step 4 |
-| `CHROME_REFRESH_TOKEN` | Refresh token from Step 5 |
-| `CHROME_EXTENSION_ID` | Extension ID from Step 6 |
-| `CHROME_PUBLISHER_ID` | Publisher ID from Step 6 (recommended for v2) |
-
-Never commit these values to git or log them in workflow output.
-
----
-
-### Rotating or revoking credentials
-
-- **Leak or suspect compromise:** In Google Cloud Console, delete or reset the OAuth client secret; revoke the app’s access under your Google Account **Third-party access**; create a new OAuth client or new refresh token via the Playground.
-- **Refresh token stopped working:** Re-run Step 5; ensure the same client id/secret and scope are used and the account still owns the item.
-
----
-
-### Service accounts (optional, advanced)
-
-Google also documents [using a service account with the Chrome Web Store API](https://developer.chrome.com/docs/webstore/service-accounts) for some setups. This action is built around **OAuth refresh tokens** in GitHub Secrets; service-account JSON keys in CI are a different pattern. Use the official doc if your organization requires it.
-
----
-
-### Still stuck?
-
-- Re-read Google’s tutorial: [Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api).
-- Confirm **Chrome Web Store API** is enabled, the **redirect URI** matches the Playground, the **scope** is exactly `https://www.googleapis.com/auth/chromewebstore`, and the signed-in user **owns** the extension in the dashboard.
 
 ## Inputs
 
@@ -340,6 +192,156 @@ curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
 
 More detail: [Chrome Web Store API reference](https://developer.chrome.com/docs/webstore/api/reference/rest).
 
+## How to get your Chrome Web Store credentials
+
+This section walks through the full setup: Google Cloud project, OAuth client, refresh token, and the IDs the action expects. Plan on **20–40 minutes** the first time, especially if you need to configure the consent screen or wait for Google’s review (only if you move out of testing mode).
+
+### Prerequisites
+
+1. **Google account that owns the extension**  
+   The account you use when you sign in to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) must be the same one you authorize in the OAuth steps below. The items you manage via the API are tied to that developer identity.
+
+2. **2-Step Verification**  
+   Google requires [2-Step Verification](https://support.google.com/accounts/answer/185839) on the account that will publish or update items through the API.
+
+3. **Extension already exists in the store**  
+   The Chrome Web Store API updates **existing** items; it does not replace creating the listing the first time in the dashboard. For a **new** extension, complete initial setup (including [store listing](https://developer.chrome.com/docs/webstore/cws-dashboard-listing) and [privacy](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) where required) before relying on CI uploads.
+
+4. **Optional but recommended: API v2**  
+   For API **v2**, you need your **publisher ID** (see [Obtain your publisher ID](https://developer.chrome.com/docs/webstore/using-api#obtain_your_publisher_id)). For **v1.1** (legacy, if you omit `publisher-id`), you still need OAuth credentials; only the REST URLs differ.
+
+---
+
+### Step 1 — Create or choose a Google Cloud project
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Use the project picker to **create a new project** or select an existing one.  
+   The Cloud project is only where the **OAuth client** and **API enablement** live. It does **not** have to match the email domain of your developer account, but the **person who clicks “Allow” in OAuth** must be the developer who owns the store items.
+
+---
+
+### Step 2 — Enable the Chrome Web Store API
+
+1. In the Cloud Console, open **APIs & Services → Library** (or search the top bar for “Chrome Web Store API”).
+2. Find **Chrome Web Store API** and click **Enable**.
+
+Without this, token and API calls for the store will fail with errors about the API being disabled.
+
+---
+
+### Step 3 — Configure the OAuth consent screen
+
+1. Go to **APIs & Services → OAuth consent screen**.
+2. Choose a user type:
+   - **External** — typical for individual developers and public GitHub workflows. While the app is in **Testing**, only **test users** you add can complete OAuth (see below).
+   - **Internal** — only if you use Google Workspace and want the app limited to your organization.
+3. Fill in the required **app information** (app name, user support email, developer contact).
+4. On **Scopes**, you can **Save and continue** without adding scopes manually here; the OAuth Playground (next sections) will request `https://www.googleapis.com/auth/chromewebstore` explicitly.
+5. If you chose **External** and the app is in **Testing**, open **Test users** and **add the Google account** that owns your Chrome Web Store items. That account must be able to finish the consent flow.
+6. Complete the wizard. If Google requires **verification** for production (broader audience), follow their process; for **Testing** + listed test users, you can proceed for your own account.
+7. **Publishing status (recommended for CI):** On the OAuth consent screen, check **Publishing status**. While the app is in **Testing**, Google may expire **refresh tokens after about 7 days**, so you would need to repeat the refresh-token step regularly. Set **Publishing status** to **In production** in the Google Cloud Console to get long-lived refresh tokens suitable for automation. Complete Google’s **app verification** flow if they require it for your configuration; many narrow internal or single-scope setups can move to production without a lengthy review.
+
+---
+
+### Step 4 — Create an OAuth 2.0 Client ID (Web application)
+
+1. Go to **APIs & Services → Credentials**.
+2. Click **Create credentials → OAuth client ID**.
+3. If prompted, set the **Application type** to **Web application**.
+4. Give it a name (e.g. `chrome-webstore-ci`).
+5. Under **Authorized redirect URIs**, click **Add URI** and enter exactly:
+
+   `https://developers.google.com/oauthplayground`
+
+   This is the redirect URL used by Google’s [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), which is the easiest way to obtain a **refresh token** once.
+
+6. Click **Create**.
+7. A dialog shows the **Client ID** and **Client Secret**. **Copy both** and store them somewhere safe (you will add them to GitHub secrets). You can always create a new secret in the console if you lose it (revoke the old one if compromised).
+
+These map to the action inputs **`client-id`** and **`client-secret`**.
+
+---
+
+### Step 5 — Get a refresh token (OAuth 2.0 Playground)
+
+The action (and the Chrome Web Store API) needs a **refresh token** so CI can obtain short-lived **access tokens** without a browser.
+
+1. Open [OAuth 2.0 Playground](https://developers.google.com/oauthplayground).
+2. Click the **gear icon** (⚙) in the top right.
+3. Check **Use your own OAuth credentials**.
+4. Paste your **OAuth Client ID** and **OAuth Client secret** from Step 4.
+5. Close the settings panel.
+6. In the left column, find **Chrome Web Store API** (or use **“Enter your own scopes”** at the bottom) and enter this scope exactly:
+
+   `https://www.googleapis.com/auth/chromewebstore`
+
+7. Click **Authorize APIs**.
+8. Sign in with the **same Google account** that owns your Chrome Web Store developer account and items. Grant access when asked.
+9. Click **Exchange authorization code for tokens**.
+10. The response panel shows an **Access token** and a **Refresh token**.
+
+**Important**
+
+- Copy the **Refresh token** and treat it like a password. This is what you store in GitHub as a secret (e.g. `CHROME_REFRESH_TOKEN`). Anyone with refresh token + client id/secret can act as that user for this API scope until you **revoke** the token in [Google Account security](https://myaccount.google.com/permissions) or rotate credentials.
+- If your OAuth app stays in **Testing**, expect refresh tokens to stop working after about **7 days**; set **Publishing status** to **In production** on the consent screen (Step 3) so CI tokens do not need constant re-issuing.
+- If the refresh token does not appear, you may need to revoke previous access for the Playground in your Google account and repeat, or ensure the redirect URI matches Step 4 exactly.
+
+This value maps to the action input **`refresh-token`**.
+
+---
+
+### Step 6 — Extension ID and publisher ID
+
+**Extension ID (`extension-id`)**
+
+- In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/), open your item. The **extension ID** is the long string in the public store URL, e.g. `https://chrome.google.com/webstore/detail/.../THIS_PART_IS_THE_ID`.
+- Use that string as **`extension-id`** in the workflow (and in GitHub secrets if you prefer).
+
+**Publisher ID (`publisher-id`, for API v2)**
+
+1. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/), open **Account** (or the account section where your publisher is shown).
+2. Copy the **Publisher ID** displayed there.  
+   If you use a **group publisher**, switch to that publisher context first, then copy the ID for that context.
+3. Pass it as **`publisher-id`** so the action uses API v2. If you omit it, the action falls back to legacy v1.1 and logs a reminder to migrate.
+
+---
+
+### Step 7 — Add secrets to GitHub
+
+In your repository: **Settings → Secrets and variables → Actions → New repository secret**.
+
+Suggested names (match the workflow examples in this README):
+
+| Secret | What it is |
+| --- | --- |
+| `CHROME_CLIENT_ID` | OAuth Client ID from Step 4 |
+| `CHROME_CLIENT_SECRET` | OAuth Client Secret from Step 4 |
+| `CHROME_REFRESH_TOKEN` | Refresh token from Step 5 |
+| `CHROME_EXTENSION_ID` | Extension ID from Step 6 |
+| `CHROME_PUBLISHER_ID` | Publisher ID from Step 6 (recommended for v2) |
+
+Never commit these values to git or log them in workflow output.
+
+---
+
+### Rotating or revoking credentials
+
+- **Leak or suspect compromise:** In Google Cloud Console, delete or reset the OAuth client secret; revoke the app’s access under your Google Account **Third-party access**; create a new OAuth client or new refresh token via the Playground.
+- **Refresh token stopped working:** Re-run Step 5; ensure the same client id/secret and scope are used and the account still owns the item.
+
+---
+
+### Service accounts (optional, advanced)
+
+Google also documents [using a service account with the Chrome Web Store API](https://developer.chrome.com/docs/webstore/service-accounts) for some setups. This action is built around **OAuth refresh tokens** in GitHub Secrets; service-account JSON keys in CI are a different pattern. Use the official doc if your organization requires it.
+
+---
+
+### Still stuck?
+
+- Re-read Google’s tutorial: [Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api).
+- Confirm **Chrome Web Store API** is enabled, the **redirect URI** matches the Playground, the **scope** is exactly `https://www.googleapis.com/auth/chromewebstore`, and the signed-in user **owns** the extension in the dashboard.
+
 ## Status meanings in the logs
 
 After upload, this action prints **short explanations** next to raw values. The authoritative definitions are Google’s API reference; below is a concise map of what you usually see.
@@ -393,11 +395,13 @@ The action metadata uses **`node24`** (see [GitHub’s JavaScript action syntax]
 
 ## Run the action locally
 
-Yes — a **`.env` file is a good approach**, as long as it stays out of git. This repo already **ignores `.env`** (see `.gitignore`).
+You can invoke the same JavaScript entrypoint this action uses on GitHub from your machine—useful for debugging uploads or checking credentials before changing a workflow.
 
-On the runner, each input is exposed as an environment variable: `INPUT_` plus the input name in **uppercase**. **Hyphens stay as hyphens.** For example, the input `file-path` becomes the env key **`INPUT_FILE-PATH`** (not `INPUT_FILE_PATH`). [`@actions/core`](https://github.com/actions/toolkit/tree/main/packages/core) `getInput('file-path')` reads `process.env['INPUT_FILE-PATH']`, which is valid in Node but awkward in Bash (you cannot `export INPUT_FILE-PATH=...`).
+Put settings in a **`.env` file at the repo root** (same pattern as many Node tools). **Do not commit it**; this repository already lists **`.env`** in `.gitignore`.
 
-This repo’s **`npm run run:local`** loads `.env` with **`override: true`** (so empty vars injected by other tools are replaced), then **copies underscore-style keys** like `INPUT_FILE_PATH` into the hyphenated keys the toolkit expects. You can use **either** style in `.env`; see [`.env.example`](.env.example).
+GitHub Actions maps each action input to an environment variable: `INPUT_` plus the input name in **uppercase**, with **hyphens unchanged**. So `file-path` becomes **`INPUT_FILE-PATH`** (not `INPUT_FILE_PATH`). [`@actions/core`](https://github.com/actions/toolkit/tree/main/packages/core) `getInput('file-path')` reads `process.env['INPUT_FILE-PATH']`, which works in Node but is awkward in Bash (`export INPUT_FILE-PATH=...` is invalid).
+
+**`npm run run:local`** loads `.env` with **`override: true`** (so stray empty vars from your shell or IDE are replaced), then **maps underscore-style keys** like `INPUT_FILE_PATH` to the hyphenated names the toolkit expects. Use **either** style in `.env`; copy from [`.env.example`](.env.example).
 
 ### Setup
 
