@@ -1,6 +1,12 @@
 # Upload to Chrome Web Store
 
-Publish your extension from CI without opening the Developer Dashboard for every release. This GitHub Action uploads your `.zip` to the [Chrome Web Store](https://chrome.google.com/webstore) and can submit it for review in one step.
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Upload%20to%20Chrome%20Web%20Store-24292e?logo=github)](https://github.com/marketplace/actions/upload-to-chrome-web-store)
+[![Release](https://img.shields.io/github/v/release/ShahafShavit/chrome-extension-upload?sort=semver)](https://github.com/ShahafShavit/chrome-extension-upload/releases)
+
+A better, easier way to upload and publish Chrome extensions to the [Chrome Web Store](https://chrome.google.com/webstore) from GitHub Actions—without opening the Developer Dashboard on every release. This action uploads your `.zip` and can submit it for review in one step.
+
+**Listing:** [Upload to Chrome Web Store on the GitHub Marketplace](https://github.com/marketplace/actions/upload-to-chrome-web-store).  
+**Use in workflows:** `uses: ShahafShavit/chrome-extension-upload@v1` (tracks latest **v1.x**), or pin a release exactly, e.g. **`@v1.0.0`**.
 
 **Highlights**
 
@@ -182,6 +188,8 @@ Google also documents [using a service account with the Chrome Web Store API](ht
 
 The action itself runs on **Node 24** on GitHub’s runners. Your own build step can use any supported Node version you like.
 
+The examples below use **`@v1`**, which resolves to the latest **v1.x** [Marketplace release](https://github.com/marketplace/actions/upload-to-chrome-web-store). For a fixed version, set **`uses: ShahafShavit/chrome-extension-upload@v1.0.0`** (or another tag from [Releases](https://github.com/ShahafShavit/chrome-extension-upload/releases)).
+
 ```yaml
 name: Release extension
 
@@ -214,8 +222,6 @@ jobs:
 ```
 
 That example assumes your pipeline already produces `dist/extension.zip`. If you only have a folder (for example `dist/` with `manifest.json` inside), add a **Create extension zip** step as in [Creating the extension zip in the workflow](#creating-the-extension-zip-in-the-workflow) and point `file-path` at the zip you create.
-
-Replace the `uses:` line with your fork or a pinned SHA if you prefer.
 
 ### Creating the extension zip in the workflow
 
@@ -455,7 +461,9 @@ npm ci
 npm run all
 ```
 
-`npm run pack` bundles `lib/main.js` into `dist/index.js` with `@vercel/ncc`. Commit `dist/` when you publish a release of the action.
+`npm run pack` bundles `lib/main.js` into `dist/index.js` with `@vercel/ncc`. **Commit `dist/`** and push it on the commit you tag for a release—Marketplace users consume `dist/index.js` from that ref.
+
+Releases: create a [GitHub Release](https://github.com/ShahafShavit/chrome-extension-upload/releases) with **Publish this Action to the GitHub Marketplace** enabled so the listing stays in sync (see [Publishing actions in GitHub Marketplace](https://docs.github.com/actions/creating-actions/publishing-actions-in-github-marketplace)).
 
 Local development targets **Node 20+** (`engines` in `package.json`).
 
